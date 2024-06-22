@@ -1,5 +1,6 @@
 package client;
 
+import java.awt.Color;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -10,7 +11,7 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 import javax.swing.JOptionPane;
-import java.awt.Color;
+import javax.swing.SwingUtilities;
 
 public class Client extends javax.swing.JFrame {
 
@@ -31,24 +32,26 @@ public class Client extends javax.swing.JFrame {
         onlineList = new ArrayList<>();
         setUpSocket();
         id = -1;
-        
-        // Đặt màu nền cho các panel
-        Color lightPurple = new Color(230, 230, 250); // Màu tím rất nhạt
+
+        // Initialize colors on the EDT
+        SwingUtilities.invokeLater(() -> initializeColors());
+    }
+
+    private void initializeColors() {
+        // Set background colors for panels, buttons, text areas, and combo box
+        Color lightPurple = new Color(230, 230, 250); // Very light purple
         jPanel1.setBackground(lightPurple);
         jPanel2.setBackground(lightPurple);
-        
-        // Đặt màu nền cho các nút
-        Color darkPurple = new Color(186, 85, 211); // Màu tím đậm hơn
+
+        Color darkPurple = new Color(186, 85, 211); // Darker purple
         jButton1.setBackground(darkPurple);
-        jButton1.setForeground(Color.WHITE); // Đặt màu chữ trắng để dễ đọc hơn
-        
-        // Đặt màu nền cho TextArea và ComboBox
+        jButton1.setForeground(Color.WHITE); // White text color for better readability
+
         jTextArea1.setBackground(lightPurple);
         jTextArea2.setBackground(lightPurple);
         jComboBox1.setBackground(lightPurple);
-        
     }
-   
+
     private void initComponents() {
 
         jPanel3 = new javax.swing.JPanel();
@@ -178,23 +181,23 @@ public class Client extends javax.swing.JFrame {
 
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {
         String messageContent = jTextField1.getText();
-        if(messageContent.isEmpty()){
+        if (messageContent.isEmpty()) {
             JOptionPane.showMessageDialog(rootPane, "Bạn chưa nhập tin nhắn!");
             return;
         }
-        if(jComboBox1.getSelectedIndex()==0){
+        if (jComboBox1.getSelectedIndex() == 0) {
             try {
-                write("send-to-global"+","+messageContent+","+this.id);
-                jTextArea1.setText(jTextArea1.getText()+"Bạn: "+messageContent+"\n");
+                write("send-to-global" + "," + messageContent + "," + this.id);
+                jTextArea1.setText(jTextArea1.getText() + "Bạn: " + messageContent + "\n");
                 jTextArea1.setCaretPosition(jTextArea1.getDocument().getLength());
             } catch (IOException ex) {
                 JOptionPane.showMessageDialog(rootPane, "Có lỗi xảy ra!");
             }
-        }else{
+        } else {
             try {
-                String[] parner = ((String)jComboBox1.getSelectedItem()).split(" ");
-                write("send-to-person"+","+messageContent+","+this.id+","+parner[1]);
-                jTextArea1.setText(jTextArea1.getText()+"Bạn (tới Client "+parner[1]+"): "+messageContent+"\n");
+                String[] partner = ((String) jComboBox1.getSelectedItem()).split(" ");
+                write("send-to-person" + "," + messageContent + "," + this.id + "," + partner[1]);
+                jTextArea1.setText(jTextArea1.getText() + "Bạn (tới Client " + partner[1] + "): " + messageContent + "\n");
                 jTextArea1.setCaretPosition(jTextArea1.getDocument().getLength());
             } catch (IOException ex) {
                 JOptionPane.showMessageDialog(rootPane, "Có lỗi xảy ra!");
@@ -204,11 +207,10 @@ public class Client extends javax.swing.JFrame {
     }
 
     private void jComboBox1ActionPerformed(java.awt.event.ActionEvent evt) {
-        if(jComboBox1.getSelectedIndex()==0){
+        if (jComboBox1.getSelectedIndex() == 0) {
             jLabel3.setText("Phòng chat");
-        }
-        else{
-            jLabel3.setText("Đang nhắn với "+jComboBox1.getSelectedItem());
+        } else {
+            jLabel3.setText("Đang nhắn với " + jComboBox1.getSelectedItem());
         }
     }
 
@@ -225,29 +227,29 @@ public class Client extends javax.swing.JFrame {
                         is = new BufferedReader(new InputStreamReader(socketOfClient.getInputStream()));
                         String message;
                         while (true) {
-                            
+
                             message = is.readLine();
-                            if(message==null){
+                            if (message == null) {
                                 break;
                             }
                             String[] messageSplit = message.split(",");
-                            if(messageSplit[0].equals("get-id")){
+                            if (messageSplit[0].equals("get-id")) {
                                 setID(Integer.parseInt(messageSplit[1]));
                                 setIDTitle();
                             }
                             if (messageSplit[0].equals("update-online-list")) {
                                 onlineList = new ArrayList<>();
-                                String online ="";
+                                String online = "";
                                 String[] onlineSplit = messageSplit[1].split("-");
-                                for(int i=0; i<onlineSplit.length; i++){
+                                for (int i = 0; i < onlineSplit.length; i++) {
                                     onlineList.add(onlineSplit[i]);
-                                    online+="Client "+onlineSplit[i]+" đang online\n";
+                                    online += "Client " + onlineSplit[i] + " đang online\n";
                                 }
                                 jTextArea2.setText(online);
                                 updateCombobox();
                             }
-                            if(messageSplit[0].equals("global-message")){
-                                jTextArea1.setText(jTextArea1.getText()+messageSplit[1]+"\n");
+                            if (messageSplit[0].equals("global-message")) {
+                                jTextArea1.setText(jTextArea1.getText() + messageSplit[1] + "\n");
                                 jTextArea1.setCaretPosition(jTextArea1.getDocument().getLength());
                             }
                         }
@@ -259,37 +261,41 @@ public class Client extends javax.swing.JFrame {
                     }
                 }
             };
-            thread.run();
+            thread.start(); // Corrected to start the thread, not run it
         } catch (Exception e) {
         }
     }
-    private void updateCombobox(){
+
+    private void updateCombobox() {
         jComboBox1.removeAllItems();
         jComboBox1.addItem("Gửi tất cả");
-        String idString = ""+this.id;
-        for(String e : onlineList){
-            if(!e.equals(idString)){
-                jComboBox1.addItem("Client "+ e);
+        String idString = "" + this.id;
+        for (String e : onlineList) {
+            if (!e.equals(idString)) {
+                jComboBox1.addItem("Client " + e);
             }
         }
-        
+
     }
-    private void setIDTitle(){
-        this.setTitle("Client "+this.id);
+
+    private void setIDTitle() {
+        this.setTitle("Client " + this.id);
     }
-    private void setID(int id){
+
+    private void setID(int id) {
         this.id = id;
     }
-    private void write(String message) throws IOException{
+
+    private void write(String message) throws IOException {
         os.write(message);
         os.newLine();
         os.flush();
     }
-  
+
     public static void main(String args[]) {
         Client client = new Client();
     }
-    
+
     private javax.swing.JButton jButton1;
     private javax.swing.JComboBox<String> jComboBox1;
     private javax.swing.JLabel jLabel1;
